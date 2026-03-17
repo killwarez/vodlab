@@ -15,7 +15,7 @@ prompt_toolkit==3.0.52
 psycopg==3.3.3
 psycopg-binary==3.3.3
 python-dateutil==2.9.0.post0
-pywin32==311
+pywin32==311; platform_system == "Windows"
 setuptools==82.0.1
 six==1.17.0
 sqlparse==0.5.5
