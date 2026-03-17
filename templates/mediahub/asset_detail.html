@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load mediahub_extras %}
+
+{% block title %}{{ asset.title }} | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="detail-header">
+    <div class="hero-inline">
+        <h1>{{ asset.title }}</h1>
+        <div class="detail-meta-line detail-meta-line-inline">
+            <span>{{ asset.get_asset_type_display }}</span>
+            <span class="badge bg-{{ asset.current_status|status_color }}-lt">{{ asset.get_current_status_display }}</span>
+            <span>{{ asset.video_codec|default:"-"|upper }}</span>
+            <span>{{ asset.resolution }}</span>
+            <span>{{ asset.duration_seconds|seconds_hms }}</span>
+            {% if asset.parent %}
+                <span>Child of <a href="{% url 'asset-detail' asset.parent.public_id %}">{{ asset.parent.title }}</a></span>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <section
+            class="card shell-card mb-4"
+            hx-get="{% url 'asset-progress-partial' asset.public_id %}"
+            hx-trigger="load, every 3s"
+            hx-swap="innerHTML"
+        >
+            {% include "mediahub/partials/asset_progress.html" %}
+        </section>
+
+        <section class="card shell-card">
+            <div class="card-body">
+                <h2 class="section-title">Playback</h2>
+                {% if outputs.dash %}
+                    <div class="player-frame">
+                        <video id="dash-player" controls poster="{% if outputs.poster %}{% url 'protected-media' outputs.poster.relative_path %}{% endif %}"></video>
+                    </div>
+                {% elif outputs.proxy %}
+                    <div class="player-frame">
+                        <video controls poster="{% if outputs.poster %}{% url 'protected-media' outputs.poster.relative_path %}{% endif %}">
+                            <source src="{% url 'protected-media' outputs.proxy.relative_path %}" type="{{ outputs.proxy.mime_type }}">
+                        </video>
+                    </div>
+                {% else %}
+                    <div class="empty-state compact">
+                        <h3>No playable output yet</h3>
+                        <p>Playback will appear when the asset is ready.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <h2 class="section-title">Outputs</h2>
+                        <div class="list-group list-group-flush output-list">
+                            {% for output in asset.outputs.all %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between gap-3">
+                                        <div>
+                                            <div class="fw-bold">{{ output.get_kind_display }}</div>
+                                            <div class="text-secondary">{{ output.relative_path }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div>{{ output.size_bytes|filesize_mb }}</div>
+                                            <a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'protected-media' output.relative_path %}" target="_blank" rel="noopener">Open</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="empty-state compact">
+                                    <h3>No derived outputs</h3>
+                                    <p>This asset is not ready yet.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <h2 class="section-title">Preview images</h2>
+                        <div class="preview-stack">
+                            {% if outputs.poster %}
+                                <div>
+                                    <div class="text-secondary small mb-2">Poster frame</div>
+                                    <img class="preview-image" src="{% url 'protected-media' outputs.poster.relative_path %}" alt="Poster frame">
+                                </div>
+                            {% endif %}
+                            {% if outputs.timeline %}
+                                <div>
+                                    <div class="text-secondary small mb-2">Timeline contact sheet</div>
+                                    <img class="preview-image timeline-preview" src="{% url 'protected-media' outputs.timeline.relative_path %}" alt="Timeline preview">
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <h2 class="section-title">Child clips</h2>
+                {% if children %}
+                    <div class="clip-grid">
+                        {% for child in children %}
+                            <a class="clip-card" href="{% url 'asset-detail' child.public_id %}">
+                                <div class="clip-card-type">{{ child.get_asset_type_display }}</div>
+                                <strong>{{ child.title }}</strong>
+                                <span>{{ child.clip_actual_start|seconds_hms }} to {{ child.clip_actual_end|seconds_hms }}</span>
+                                <span class="badge bg-{{ child.current_status|status_color }}-lt align-self-start">{{ child.get_current_status_display }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state compact">
+                        <h3>No clips yet</h3>
+                        <p>Create a stream-copy clip from this source asset to see it appear here as a first-class child asset.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-4">
+        <section class="card shell-card">
+            <div class="card-body">
+                <h2 class="section-title">Asset facts</h2>
+                <div class="metric-grid">
+                    <div><span>Original file</span><strong>{{ asset.original_name }}</strong></div>
+                    <div><span>Container</span><strong>{{ asset.container_format|default:"-" }}</strong></div>
+                    <div><span>Video codec</span><strong>{{ asset.video_codec|default:"-" }}</strong></div>
+                    <div><span>Audio codec</span><strong>{{ asset.audio_codec|default:"-" }}</strong></div>
+                    <div><span>Frame rate</span><strong>{{ asset.frame_rate|default:"-" }}</strong></div>
+                    <div><span>Bitrate</span><strong>{{ asset.bitrate|bitrate_mbps }}</strong></div>
+                    <div><span>This asset storage</span><strong>{{ asset_storage_total|filesize_human }}</strong></div>
+                    <div><span>Family storage</span><strong>{{ family_storage_total|filesize_human }}</strong></div>
+                    <div><span>Checksum</span><strong class="mono">{{ asset.checksum|default:"-"|slice:":16" }}{% if asset.checksum %}...{% endif %}</strong></div>
+                    <div><span>Has audio</span><strong>{% if asset.has_audio %}Yes{% else %}No{% endif %}</strong></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <h2 class="section-title">Create clip</h2>
+                <p class="text-secondary">
+                    Clipping uses direct stream copy from the original upload. Requested in/out times are snapped to safe keyframe boundaries when needed.
+                </p>
+                <form method="post" action="{% url 'asset-clip' asset.public_id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ clip_form.requested_start.id_for_label }}">Start time (seconds)</label>
+                        {{ clip_form.requested_start }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ clip_form.requested_end.id_for_label }}">End time (seconds)</label>
+                        {{ clip_form.requested_end }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ clip_form.title.id_for_label }}">Clip title</label>
+                        {{ clip_form.title }}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-pill w-100">Queue clip job</button>
+                </form>
+                {% if asset.asset_type == "clip" %}
+                    <div class="form-hint mt-3">
+                        Requested: {{ asset.clip_requested_start|seconds_hms }} to {{ asset.clip_requested_end|seconds_hms }}.
+                        Actual: {{ asset.clip_actual_start|seconds_hms }} to {{ asset.clip_actual_end|seconds_hms }}.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <h2 class="section-title">Recent jobs</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm table-vcenter">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                                <tr>
+                                    <td>#{{ job.id }}</td>
+                                    <td>{{ job.get_job_type_display }}</td>
+                                    <td><span class="badge bg-{{ job.status|status_color }}-lt">{{ job.get_status_display }}</span></td>
+                                    <td>
+                                        <div class="progress-inline">
+                                            <span>{{ job.progress_percent }}%</span>
+                                            <span class="text-secondary">{{ job.progress_stage|default:"Queued" }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-secondary">No jobs recorded yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <h2 class="section-title">Audit trail</h2>
+                <div class="event-list">
+                    {% for event in audit_events %}
+                        <div class="event-item">
+                            <strong>{{ event.get_event_type_display }}</strong>
+                            <span>{{ event.message }}</span>
+                            <small>{{ event.created_at|date:"Y-m-d H:i:s" }}</small>
+                        </div>
+                    {% empty %}
+                        <div class="text-secondary">No audit events yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="card shell-card mt-4">
+            <div class="card-body">
+                <h2 class="section-title">Remove asset</h2>
+                <p class="text-secondary">
+                    Remove this item from the library and delete its stored files from local storage.
+                </p>
+                <div class="danger-zone-actions">
+                    <form method="post" action="{% url 'asset-delete' asset.public_id %}" onsubmit="return confirm('Remove this asset from the library?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'library' %}">
+                        <button class="btn btn-outline-danger w-100" type="submit">
+                            {% if asset.asset_type == "clip" %}Remove clip{% else %}Remove asset{% endif %}
+                        </button>
+                    </form>
+                    {% if children %}
+                        <form method="post" action="{% url 'asset-delete-tree' asset.public_id %}" onsubmit="return confirm('Remove this parent asset and all child clips?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'library' %}">
+                            <button class="btn btn-danger w-100" type="submit">Remove asset with all child clips</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if outputs.dash %}
+<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+<script>
+(() => {
+    const video = document.getElementById("dash-player");
+    if (!video || !window.dashjs) {
+        return;
+    }
+    const player = dashjs.MediaPlayer().create();
+    player.initialize(video, "{% url 'protected-media' outputs.dash.relative_path %}", true);
+})();
+</script>
+{% endif %}
+{% endblock %}

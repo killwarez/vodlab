@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load mediahub_extras %}
+
+{% block title %}Library | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div class="hero-inline">
+        <h1>Library</h1>
+        <p class="hero-summary">Originals, clips, and storage</p>
+    </div>
+</section>
+
+<section class="stat-row">
+    <div class="stat-chip">
+        <span class="stat-label">Visible assets</span>
+        <strong>{{ visible_asset_count }}</strong>
+    </div>
+    <div class="stat-chip">
+        <span class="stat-label">Original files</span>
+        <strong>{{ visible_original_count }}</strong>
+    </div>
+    <div class="stat-chip">
+        <span class="stat-label">Clips</span>
+        <strong>{{ visible_clip_count }}</strong>
+    </div>
+</section>
+
+<section class="card shell-card mt-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Name</label>
+                <input class="form-control" type="text" name="q" value="{{ filters.q }}" placeholder="title or original file">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">Any</option>
+                    <option value="uploaded" {% if filters.status == "uploaded" %}selected{% endif %}>Uploaded</option>
+                    <option value="processing" {% if filters.status == "processing" %}selected{% endif %}>Preparing</option>
+                    <option value="ready" {% if filters.status == "ready" %}selected{% endif %}>Ready</option>
+                    <option value="failed" {% if filters.status == "failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select class="form-select" name="asset_type">
+                    <option value="">Any</option>
+                    <option value="original" {% if filters.asset_type == "original" %}selected{% endif %}>Original</option>
+                    <option value="clip" {% if filters.asset_type == "clip" %}selected{% endif %}>Clip</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Codec</label>
+                <input class="form-control" type="text" name="codec" value="{{ filters.codec }}" placeholder="h264">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Resolution</label>
+                <input class="form-control" type="text" name="resolution" value="{{ filters.resolution }}" placeholder="1920x1080">
+            </div>
+            <div class="col-md-1 d-grid">
+                <button class="btn btn-primary" type="submit">Filter</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="card shell-card mt-4">
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table library-table">
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Video</th>
+                    <th>Storage</th>
+                    <th>Duration</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for group in asset_groups %}
+                    <tr class="library-row-parent{% if group.context_only %} library-row-context{% endif %} library-clickable-row"
+                        data-asset-url="{% url 'asset-detail' group.asset.public_id %}"
+                        tabindex="0"
+                        role="link"
+                        aria-label="Open {{ group.asset.title }}">
+                        <td>
+                            <div class="fw-bold">{{ group.asset.title }}</div>
+                            <div class="text-secondary">{{ group.asset.original_name }}</div>
+                            {% if group.children %}
+                                <div class="form-hint">{{ group.children|length }} child clip{{ group.children|length|pluralize }}</div>
+                            {% elif group.context_only %}
+                                <div class="form-hint">Parent asset shown for clip context</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ group.asset.get_asset_type_display }}</td>
+                        <td><span class="badge bg-{{ group.asset.current_status|status_color }}-lt">{{ group.asset.get_current_status_display }}</span></td>
+                        <td>
+                            <div>{{ group.asset.video_codec|default:"-"|upper }}</div>
+                            <div class="text-secondary">{{ group.asset.resolution }}</div>
+                        </td>
+                        <td>
+                            <div>{{ group.family_storage_bytes|filesize_human }}</div>
+                            {% if group.has_family_storage %}
+                                <div class="text-secondary">includes child clips</div>
+                            {% else %}
+                                <div class="text-secondary">asset footprint</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ group.asset.duration_seconds|seconds_hms }}</td>
+                        <td>{{ group.asset.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <div class="library-row-actions">
+                                <form method="post" action="{% url 'asset-delete' group.asset.public_id %}" onsubmit="return confirm('Remove this asset from the library?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                </form>
+                                {% if group.children %}
+                                    <form method="post" action="{% url 'asset-delete-tree' group.asset.public_id %}" onsubmit="return confirm('Remove this parent asset and all child clips?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button class="btn btn-sm btn-danger" type="submit">Remove with children</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% for child in group.children %}
+                        <tr class="library-row-child library-clickable-row"
+                            data-asset-url="{% url 'asset-detail' child.public_id %}"
+                            tabindex="0"
+                            role="link"
+                            aria-label="Open {{ child.title }}">
+                            <td>
+                                <div class="library-child-cell">
+                                    <span class="library-child-branch" aria-hidden="true"></span>
+                                    <div>
+                                        <div class="fw-bold">{{ child.title }}</div>
+                                        <div class="text-secondary">{{ child.original_name }}</div>
+                                        <div class="form-hint">Child clip of {{ group.asset.title }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ child.get_asset_type_display }}</td>
+                            <td><span class="badge bg-{{ child.current_status|status_color }}-lt">{{ child.get_current_status_display }}</span></td>
+                            <td>
+                                <div>{{ child.video_codec|default:"-"|upper }}</div>
+                                <div class="text-secondary">{{ child.resolution }}</div>
+                            </td>
+                            <td>
+                                <div>{{ child.storage_bytes|filesize_human }}</div>
+                                <div class="text-secondary">asset footprint</div>
+                            </td>
+                            <td>{{ child.duration_seconds|seconds_hms }}</td>
+                            <td>{{ child.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="text-end">
+                                <div class="library-row-actions">
+                                    <form method="post" action="{% url 'asset-delete' child.public_id %}" onsubmit="return confirm('Remove this clip from the library?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% empty %}
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3>No assets yet</h3>
+                                <p>Upload a file to add it to the library.</p>
+                                <a class="btn btn-primary btn-pill empty-state-action" href="{% url 'upload' %}">Upload the first asset</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function () {
+        if (window.__mediaHubLibraryRowBinding) {
+            return;
+        }
+        window.__mediaHubLibraryRowBinding = true;
+
+        function isInteractiveTarget(target) {
+            return Boolean(target.closest("a, button, input, select, textarea, form, label"));
+        }
+
+        function openRow(row) {
+            const url = row && row.dataset ? row.dataset.assetUrl : "";
+            if (!url) {
+                return;
+            }
+            if (typeof window.MediaHubNavigate === "function") {
+                window.MediaHubNavigate(url);
+                return;
+            }
+            window.location.href = url;
+        }
+
+        document.addEventListener("click", function (event) {
+            const row = event.target.closest("tr[data-asset-url]");
+            if (!row || isInteractiveTarget(event.target)) {
+                return;
+            }
+            openRow(row);
+        });
+
+        document.addEventListener("keydown", function (event) {
+            const row = event.target.closest("tr[data-asset-url]");
+            if (!row || isInteractiveTarget(event.target)) {
+                return;
+            }
+            if (event.key !== "Enter" && event.key !== " ") {
+                return;
+            }
+            event.preventDefault();
+            openRow(row);
+        });
+    })();
+</script>
+{% endblock %}

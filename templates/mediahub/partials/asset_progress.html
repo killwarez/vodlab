@@ -1,0 +1,39 @@
+{% load mediahub_extras %}
+
+<div class="card-body">
+    <h2 class="section-title">Current activity</h2>
+    {% if focus_job %}
+        <div class="progress-panel">
+            <div class="progress-panel-head">
+                <div>
+                    <div class="fw-bold">{{ focus_job.get_job_type_display }}</div>
+                    <div class="text-secondary">{{ focus_job.progress_stage|default:"Queued" }}</div>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-{{ focus_job.status|status_color }}-lt">{{ focus_job.get_status_display }}</span>
+                    <div class="progress-panel-percent">{{ focus_job.progress_percent }}%</div>
+                </div>
+            </div>
+            <div class="progress-track progress-track-large" aria-hidden="true">
+                <div class="progress-fill" style="width: {{ focus_job.progress_percent }}%"></div>
+            </div>
+            <div class="progress-panel-message text-secondary">
+                {{ focus_job.progress_message|default:"Waiting for worker" }}
+            </div>
+            <div class="progress-panel-meta">
+                <span>Updated {{ focus_job.updated_at|date:"Y-m-d H:i:s" }}</span>
+                {% if focus_job.progress_payload.speed %}
+                    <span>Speed {{ focus_job.progress_payload.speed }}</span>
+                {% endif %}
+                {% if focus_job.progress_payload.current_seconds and focus_job.progress_payload.duration_seconds %}
+                    <span>{{ focus_job.progress_payload.current_seconds|floatformat:1 }}s / {{ focus_job.progress_payload.duration_seconds|floatformat:1 }}s</span>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state compact">
+            <h3>No active work</h3>
+            <p>This asset does not have any recorded jobs yet.</p>
+        </div>
+    {% endif %}
+</div>

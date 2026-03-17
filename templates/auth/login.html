@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+    <div class="auth-card">
+        <h1>Sign in</h1>
+        <form method="post" class="card card-body auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="form-hint text-danger">{{ form.username.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="form-hint text-danger">{{ form.password.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-pill w-100">Sign in</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

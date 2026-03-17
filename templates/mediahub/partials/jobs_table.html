@@ -1,0 +1,67 @@
+{% load mediahub_extras %}
+
+<div class="table-responsive">
+    <table class="table table-vcenter card-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Job</th>
+                <th>Asset</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Attempts</th>
+                <th>Updated</th>
+                <th>Error</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+                <tr>
+                    <td>#{{ job.id }}</td>
+                    <td>{{ job.get_job_type_display }}</td>
+                    <td>
+                        {% if job.asset %}
+                            <a href="{% url 'asset-detail' job.asset.public_id %}">{{ job.asset.title }}</a>
+                        {% else %}
+                            <span class="text-secondary">No asset</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge bg-{{ job.status|status_color }}-lt">{{ job.get_status_display }}</span></td>
+                    <td class="job-progress-cell">
+                        <div class="progress-block">
+                            <div class="progress-label-row">
+                                <strong>{{ job.progress_percent }}%</strong>
+                                <span class="text-secondary">{{ job.progress_stage|default:"Queued" }}</span>
+                            </div>
+                            <div class="progress-track" aria-hidden="true">
+                                <div class="progress-fill" style="width: {{ job.progress_percent }}%"></div>
+                            </div>
+                            <div class="progress-detail text-secondary">{{ job.progress_message|default:"Waiting for worker" }}</div>
+                        </div>
+                    </td>
+                    <td>{{ job.attempts }} / {{ job.max_attempts }}</td>
+                    <td>{{ job.updated_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="job-error">{{ job.error_message|default:"-" }}</td>
+                    <td class="text-end">
+                        {% if job.status == "failed" %}
+                            <form method="post" action="{% url 'job-retry' job.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Retry</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state compact">
+                            <h3>No jobs yet</h3>
+                            <p>Start an upload or create a clip to see jobs here.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

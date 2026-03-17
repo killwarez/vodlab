@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div class="hero-inline">
+        <h1>Jobs</h1>
+        <p class="hero-summary">Queue, progress, and retries</p>
+    </div>
+</section>
+
+<section
+    class="card shell-card"
+    hx-get="{% url 'jobs-partial' %}"
+    hx-trigger="load, every 3s"
+    hx-swap="innerHTML"
+>
+    {% include "mediahub/partials/jobs_table.html" %}
+</section>
+{% endblock %}

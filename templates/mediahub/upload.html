@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load mediahub_extras %}
+
+{% block title %}Upload | {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div class="hero-inline">
+        <h1>Upload</h1>
+        <p class="hero-summary">Add a video and keep browsing</p>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="card shell-card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="upload-title">Asset title</label>
+                    <input id="upload-title" class="form-control" type="text" placeholder="Optional display title">
+                    <div class="form-hint">Used for a single file upload. Leave blank to use the uploaded file name.</div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" for="upload-file">Video files</label>
+                    <input id="upload-file" class="form-control" type="file" accept="{{ allowed_extensions|join:',' }}"{% if supports_multiple_uploads %} multiple{% endif %}>
+                    <div class="form-hint">
+                        Allowed extensions: {{ allowed_extensions|join:", " }}.
+                        {% if supports_multiple_uploads %}Choose one or more files to queue them together.{% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button id="upload-button" class="btn btn-primary btn-pill" type="button">Start uploads</button>
+                    <a class="btn btn-outline-primary btn-pill" href="{% url 'library' %}">Back to library</a>
+                </div>
+                <div id="upload-browser-note" class="form-hint mt-3">
+                    Uploads continue while you browse the site and multiple files are processed one after another.
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="card shell-card">
+            <div class="card-body">
+                <h3 class="section-title">Upload limits</h3>
+                <ul class="plain-list">
+                    <li>Chunk size: {{ chunk_size|filesize_human }}</li>
+                    <li>Upload limit: {{ max_upload_size|filesize_human }}</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="card shell-card mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h3 class="section-title mb-1">Upload queue</h3>
+                <div id="upload-status" class="text-secondary">No active uploads.</div>
+            </div>
+        </div>
+        <div id="upload-page-empty" class="empty-state compact mt-3">
+            <h3>No uploads yet</h3>
+            <p>Choose one or more files and start upload.</p>
+        </div>
+        <div id="upload-page-list" class="upload-queue-list mt-3"></div>
+    </div>
+</section>
+{% endblock %}
