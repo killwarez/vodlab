@@ -27,4 +27,7 @@ README.md
 *.swp
 *.swo
 control/
-update-vodlab.ps1
+deploy.ps1
+samples/
+docs/
+tests/

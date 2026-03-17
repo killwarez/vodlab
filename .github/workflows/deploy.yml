@@ -17,5 +17,11 @@ jobs:
     steps:
       - name: Run fixed deploy script
         shell: pwsh
+        env:
+          DEPLOY_SCRIPT_PATH: ${{ secrets.DEPLOY_SCRIPT_PATH }}
         run: |
-          & 'D:\Projects\2026-03-17 VOD Lab\update-vodlab.ps1'
+          if (-not $env:DEPLOY_SCRIPT_PATH) {
+            throw "Missing DEPLOY_SCRIPT_PATH secret."
+          }
+
+          & $env:DEPLOY_SCRIPT_PATH
