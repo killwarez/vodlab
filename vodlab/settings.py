@@ -59,6 +59,7 @@ BROKER_OUT = STORAGE_ROOT / "broker_out"
 BROKER_PROCESSED = STORAGE_ROOT / "broker_processed"
 BROKER_QUEUE = STORAGE_ROOT / "broker_queue"
 CACHE_ROOT = STORAGE_ROOT / "cache"
+BROKER_CONTROL = STORAGE_ROOT / "broker_control"
 LOGS_ROOT = STORAGE_ROOT / "logs"
 
 for path in (
@@ -73,12 +74,14 @@ for path in (
     BROKER_PROCESSED,
     BROKER_QUEUE,
     CACHE_ROOT,
+    BROKER_CONTROL,
     LOGS_ROOT,
 ):
     path.mkdir(parents=True, exist_ok=True)
 
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -90,6 +93,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -162,6 +166,11 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -187,8 +196,13 @@ FFPROBE_BIN = env("FFPROBE_BIN", "ffprobe")
 SESSION_COOKIE_HTTPONLY = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", not DEBUG)
+
+if env_bool("DJANGO_USE_X_FORWARDED_PROTO", not DEBUG):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
+    STORAGES["staticfiles"] = {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
@@ -210,6 +224,7 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "data_folder_in": str(BROKER_QUEUE),
     "data_folder_out": str(BROKER_QUEUE),
     "data_folder_processed": str(BROKER_PROCESSED),
+    "control_folder": str(BROKER_CONTROL),
 }
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

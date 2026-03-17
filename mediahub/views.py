@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.db import connections
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -99,6 +100,17 @@ def dispatch_job(job: ProcessingJob) -> None:
         process_asset_task.delay(job.id)
     elif job.job_type == ProcessingJob.JobType.CREATE_CLIP:
         create_clip_task.delay(job.id)
+
+
+@require_GET
+def healthz(request: HttpRequest) -> HttpResponse:
+    try:
+        with connections["default"].cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception:
+        return JsonResponse({"status": "error"}, status=503)
+    return JsonResponse({"status": "ok"})
 
 
 def home(request: HttpRequest) -> HttpResponse:

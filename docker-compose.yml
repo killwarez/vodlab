@@ -1,0 +1,66 @@
+name: vodlab
+
+x-app-env: &app_env
+  APP_NAME: ${APP_NAME:-Media Hub}
+  APP_TIME_ZONE: ${APP_TIME_ZONE:-UTC}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
+  DJANGO_USE_X_FORWARDED_PROTO: ${DJANGO_USE_X_FORWARDED_PROTO}
+  DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST}
+  POSTGRES_HOST: ${POSTGRES_HOST:-host.docker.internal}
+  POSTGRES_PORT: ${POSTGRES_PORT}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+  POSTGRES_CONN_MAX_AGE: ${POSTGRES_CONN_MAX_AGE}
+  DEMO_USERNAME: ${DEMO_USERNAME}
+  DEMO_PASSWORD: ${DEMO_PASSWORD}
+  MEDIA_ALLOWED_EXTENSIONS: ${MEDIA_ALLOWED_EXTENSIONS}
+  MEDIA_CHUNK_SIZE: ${MEDIA_CHUNK_SIZE}
+  MEDIA_MAX_UPLOAD_SIZE: ${MEDIA_MAX_UPLOAD_SIZE}
+  UPLOAD_SESSION_EXPIRY_SECONDS: ${UPLOAD_SESSION_EXPIRY_SECONDS}
+  LOGIN_RATE_LIMIT_ATTEMPTS: ${LOGIN_RATE_LIMIT_ATTEMPTS}
+  LOGIN_RATE_LIMIT_WINDOW: ${LOGIN_RATE_LIMIT_WINDOW}
+  FFMPEG_BIN: ${FFMPEG_BIN:-ffmpeg}
+  FFPROBE_BIN: ${FFPROBE_BIN:-ffprobe}
+  CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-0}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-filesystem://}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-cache+memory://}
+
+services:
+  web:
+    build:
+      context: .
+    command:
+      - gunicorn
+      - vodlab.wsgi:application
+      - --bind
+      - 0.0.0.0:8000
+      - --workers
+      - "2"
+      - --timeout
+      - "120"
+    environment: *app_env
+    ports:
+      - "${VODLAB_HOST_BIND_IP}:${VODLAB_HOST_PORT}:8000"
+    restart: unless-stopped
+    volumes:
+      - "${VODLAB_HOST_STORAGE_PATH}:/app/storage"
+      - "${VODLAB_HOST_MEDIA_PATH}:/app/media"
+
+  worker:
+    build:
+      context: .
+    command:
+      - celery
+      - -A
+      - vodlab
+      - worker
+      - --loglevel=info
+    environment: *app_env
+    restart: unless-stopped
+    volumes:
+      - "${VODLAB_HOST_STORAGE_PATH}:/app/storage"
+      - "${VODLAB_HOST_MEDIA_PATH}:/app/media"

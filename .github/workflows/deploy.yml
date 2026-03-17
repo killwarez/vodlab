@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: vodlab-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+      - windows
+      - vodlab-deploy
+    steps:
+      - name: Run fixed deploy script
+        shell: pwsh
+        run: |
+          & 'D:\Projects\2026-03-17 VOD Lab\update-vodlab.ps1'

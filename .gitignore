@@ -10,8 +10,10 @@ media/
 storage/
 uploads/
 .env
+deploy.env
 tools/
 .env.example
+deploy.env.example
 README.md
 .vscode/launch.json
 *.log
@@ -25,3 +27,4 @@ README.md
 *.swp
 *.swo
 control/
+update-vodlab.ps1

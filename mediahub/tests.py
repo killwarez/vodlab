@@ -41,6 +41,11 @@ class ClipBoundaryTests(SimpleTestCase):
 
 
 class LibraryAuthTests(TestCase):
+    def test_healthz_reports_ok(self):
+        response = self.client.get(reverse("healthz"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
     def test_library_requires_login(self):
         response = self.client.get(reverse("library"))
         self.assertEqual(response.status_code, 302)

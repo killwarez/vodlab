@@ -8,6 +8,7 @@ click-plugins==1.1.1.2
 click-repl==0.3.0
 colorama==0.4.6
 Django==6.0.3
+gunicorn==25.1.0
 kombu==5.6.2
 packaging==26.0
 prompt_toolkit==3.0.52
@@ -22,3 +23,4 @@ tzdata==2025.3
 tzlocal==5.3.1
 vine==5.1.0
 wcwidth==0.6.0
+whitenoise==6.12.0
