@@ -14,7 +14,6 @@ jobs:
     runs-on:
       - self-hosted
       - windows
-      - vodlab-deploy
     steps:
       - name: Run fixed deploy script
         shell: pwsh
